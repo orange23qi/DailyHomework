@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>每日作业 - 学习小助手</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📚 每日作业</h1>
+            <p class="subtitle">让学习变得更有趣！</p>
+            <p class="date" id="currentDate"></p>
+        </header>
+
+        <div class="subject-grid">
+            <!-- 语文 -->
+            <div class="subject-card chinese disabled">
+                <div class="subject-icon">📖</div>
+                <div class="subject-name">语文</div>
+                <div class="subject-desc">敬请期待...</div>
+            </div>
+
+            <!-- 数学 -->
+            <a href="{{ url_for('math_practice') }}" class="subject-card math active">
+                <div class="subject-icon">🔢</div>
+                <div class="subject-name">数学</div>
+                <div class="subject-desc">100以内加减法</div>
+            </a>
+
+            <!-- 英语 -->
+            <div class="subject-card english disabled">
+                <div class="subject-icon">🔤</div>
+                <div class="subject-name">英语</div>
+                <div class="subject-desc">敬请期待...</div>
+            </div>
+        </div>
+
+        {% if history %}
+        <div class="card">
+            <h2 class="section-title">📊 最近练习记录</h2>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>学科</th>
+                        <th>用时</th>
+                        <th>正确率</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in history[:5] %}
+                    <tr>
+                        <td>{{ record.date }}</td>
+                        <td>{{ record.subject }}</td>
+                        <td>{{ record.duration }}</td>
+                        <td>
+                            {% if record.accuracy is not none %}
+                            <span
+                                class="accuracy-badge {% if record.accuracy >= 90 %}accuracy-high{% elif record.accuracy >= 70 %}accuracy-mid{% else %}accuracy-low{% endif %}">
+                                {{ record.accuracy }}%
+                            </span>
+                            {% else %}
+                            <span class="accuracy-badge">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // 显示当前日期
+        const now = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+        document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', options);
+    </script>
+</body>
+
+</html>

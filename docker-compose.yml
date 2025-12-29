@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  homework:
+    build: .
+    container_name: daily-homework
+    ports:
+      - "5000:5000"
+    volumes:
+      # 持久化数据库
+      - ./data:/app/data
+    environment:
+      - SERVERCHAN_SENDKEY=${SERVERCHAN_SENDKEY:-YOUR_SENDKEY}
+    restart: unless-stopped

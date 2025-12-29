@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>数学练习 - 每日作业</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <a href="{{ url_for('index') }}" class="back-link">← 返回主页</a>
+
+        <div class="card">
+            <div class="practice-header">
+                <div class="timer">
+                    <span class="timer-icon">⏱️</span>
+                    <span id="timerDisplay">00:00</span>
+                </div>
+                <div class="progress-info">
+                    <span id="answeredCount">0</span> / {{ questions|length }} 题
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+            </div>
+
+            <form id="practiceForm" action="{{ url_for('math_submit') }}" method="POST">
+                <input type="hidden" name="practice_id" value="{{ practice_id }}">
+
+                <div class="question-list">
+                    {% for q in questions %}
+                    <div class="question-item">
+                        <div class="question-number">{{ q.id }}</div>
+                        <div class="question-content">
+                            <span class="question-text">{{ q.display }}</span>
+                            <input type="number" name="answer_{{ q.id }}" class="answer-input" inputmode="numeric"
+                                pattern="[0-9]*" autocomplete="off" data-question="{{ q.id }}" required>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+                        ✅ 提交答案
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 计时器
+        let startTime = Date.now();
+        let timerInterval;
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').textContent = `${minutes}:${seconds}`;
+        }
+
+        timerInterval = setInterval(updateTimer, 1000);
+
+        // 进度追踪
+        const inputs = document.querySelectorAll('.answer-input');
+        const totalQuestions = inputs.length;
+        const progressBar = document.getElementById('progressBar');
+        const answeredCount = document.getElementById('answeredCount');
+
+        function updateProgress() {
+            let answered = 0;
+            inputs.forEach(input => {
+                if (input.value.trim() !== '') {
+                    answered++;
+                }
+            });
+
+            const percentage = (answered / totalQuestions) * 100;
+            progressBar.style.width = percentage + '%';
+            answeredCount.textContent = answered;
+        }
+
+        inputs.forEach(input => {
+            input.addEventListener('input', updateProgress);
+
+            // 按回车键跳到下一题
+            input.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const currentIndex = Array.from(inputs).indexOf(this);
+                    if (currentIndex < inputs.length - 1) {
+                        inputs[currentIndex + 1].focus();
+                    }
+                }
+            });
+        });
+
+        // 表单提交验证
+        document.getElementById('practiceForm').addEventListener('submit', function (e) {
+            let allFilled = true;
+            inputs.forEach(input => {
+                if (input.value.trim() === '') {
+                    allFilled = false;
+                    input.focus();
+                    input.style.borderColor = '#f56565';
+                }
+            });
+
+            if (!allFilled) {
+                e.preventDefault();
+                alert('请完成所有题目再提交哦！');
+                return false;
+            }
+
+            clearInterval(timerInterval);
+        });
+
+        // 自动聚焦第一题
+        inputs[0].focus();
+    </script>
+</body>
+
+</html>

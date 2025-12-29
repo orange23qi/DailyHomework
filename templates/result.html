@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>练习结果 - 每日作业</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="result-header">
+                {% if result.accuracy >= 90 %}
+                <div class="result-emoji">🎉</div>
+                <div class="result-title">太棒了！</div>
+                <div class="result-message">你真是个小天才！</div>
+                {% elif result.accuracy >= 70 %}
+                <div class="result-emoji">👍</div>
+                <div class="result-title">做得不错！</div>
+                <div class="result-message">继续加油哦！</div>
+                {% else %}
+                <div class="result-emoji">💪</div>
+                <div class="result-title">继续努力！</div>
+                <div class="result-message">多练习就会进步的！</div>
+                {% endif %}
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value">{{ result.duration_display }}</div>
+                    <div class="stat-label">⏱️ 用时</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ result.correct }}</div>
+                    <div class="stat-label">✅ 正确</div>
+                </div>
+                <div class="stat-item wrong">
+                    <div class="stat-value">{{ result.wrong }}</div>
+                    <div class="stat-label">❌ 错误</div>
+                </div>
+                <div class="stat-item accuracy">
+                    <div class="stat-value">{{ result.accuracy }}%</div>
+                    <div class="stat-label">📊 正确率</div>
+                </div>
+            </div>
+
+            {% if result.wrong_questions %}
+            <div class="wrong-section">
+                <h2 class="section-title">📝 错题订正</h2>
+                <p style="color: #718096; margin-bottom: 20px;">请把下面的错题重新做一遍，全部订正正确后才能返回主页哦！</p>
+
+                <form id="correctionForm" action="{{ url_for('math_correct') }}" method="POST">
+                    <input type="hidden" name="practice_id" value="{{ result.practice_id }}">
+
+                    {% for q in result.wrong_questions %}
+                    <div class="wrong-item" data-question="{{ q.id }}">
+                        <div class="question-number">{{ q.id }}</div>
+                        <div class="question-content">
+                            <span class="question-text">{{ q.display }}</span>
+                            <input type="number" name="correction_{{ q.id }}" class="correction-input"
+                                inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+                                data-correct="{{ q.correct_answer }}" required>
+                        </div>
+                        <div class="wrong-answer">
+                            <span class="your-answer">{{ q.user_answer }}</span>
+                            <span style="color: #718096; font-size: 0.9rem;">你的答案</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-success btn-block" id="correctBtn">
+                            ✏️ 提交订正
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% else %}
+            <div class="message message-success">
+                🌟 全部正确，没有错题！
+            </div>
+            <div class="button-group">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">🏠 返回主页</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // 订正输入验证
+        const correctionInputs = document.querySelectorAll('.correction-input');
+
+        correctionInputs.forEach(input => {
+            input.addEventListener('input', function () {
+                const correctAnswer = parseInt(this.dataset.correct);
+                const userAnswer = parseInt(this.value);
+
+                if (this.value.trim() !== '') {
+                    if (userAnswer === correctAnswer) {
+                        this.classList.remove('wrong');
+                        this.classList.add('correct');
+                    } else {
+                        this.classList.remove('correct');
+                    }
+                }
+            });
+
+            // 按回车键跳到下一题
+            input.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const currentIndex = Array.from(correctionInputs).indexOf(this);
+                    if (currentIndex < correctionInputs.length - 1) {
+                        correctionInputs[currentIndex + 1].focus();
+                    }
+                }
+            });
+        });
+
+        // 表单提交
+        const form = document.getElementById('correctionForm');
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                let allFilled = true;
+                correctionInputs.forEach(input => {
+                    if (input.value.trim() === '') {
+                        allFilled = false;
+                        input.focus();
+                    }
+                });
+
+                if (!allFilled) {
+                    e.preventDefault();
+                    alert('请完成所有订正题目！');
+                    return false;
+                }
+            });
+
+            // 自动聚焦第一个订正输入框
+            if (correctionInputs.length > 0) {
+                correctionInputs[0].focus();
+            }
+        }
+    </script>
+</body>
+
+</html>
