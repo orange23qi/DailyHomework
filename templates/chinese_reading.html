@@ -198,7 +198,9 @@
             </div>
             <div class="control-buttons">
                 <button class="ctrl-btn pause" id="pauseBtn" onclick="togglePause()">⏸️ 暂停</button>
-                <button class="ctrl-btn next" id="nextBtn" onclick="loadNextStory()">📖 下一个故事</button>
+                <button class="ctrl-btn next" id="nextBtn" onclick="loadNextStory()">📖 下一个</button>
+                <button class="ctrl-btn switch" id="switchBtn" onclick="switchContentType()"
+                    style="background: #e0e7ff; color: #4338ca;">🔄 换类型</button>
             </div>
         </div>
 
@@ -226,7 +228,52 @@
 
     <script>
         const READING_DURATION = {{ reading_duration }} * 60;
-        let remainingSeconds = READING_DURATION;
+        const TODAY = new Date().toISOString().split('T')[0];  // 今天的日期 YYYY-MM-DD
+        const STORAGE_KEY = 'reading_progress_' + TODAY;
+
+        // 从 localStorage 恢复进度，或使用默认值
+        function getStoredProgress() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    // 确保是今天的进度
+                    if (data.date === TODAY && data.remainingSeconds >= 0) {
+                        return data.remainingSeconds;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load progress:', e);
+            }
+            return READING_DURATION;
+        }
+
+        // 保存进度到 localStorage
+        function saveProgress() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    date: TODAY,
+                    remainingSeconds: remainingSeconds
+                }));
+            } catch (e) {
+                console.error('Failed to save progress:', e);
+            }
+        }
+
+        // 清理过期的进度数据
+        function cleanOldProgress() {
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('reading_progress_') && key !== STORAGE_KEY) {
+                        localStorage.removeItem(key);
+                    }
+                }
+            } catch (e) { }
+        }
+        cleanOldProgress();
+
+        let remainingSeconds = getStoredProgress();
         let timerInterval;
         let isPaused = false;
 
@@ -241,6 +288,9 @@
             const display = document.getElementById('timerDisplay');
             const countdown = document.getElementById('countdown');
             display.textContent = formatTime(remainingSeconds);
+
+            // 保存进度
+            saveProgress();
 
             if (remainingSeconds <= 0) {
                 clearInterval(timerInterval);
@@ -264,35 +314,43 @@
             }
         }
 
+        // 切换内容类型 - 跳转到选择页面但保持倒计时
+        function switchContentType() {
+            // 保存当前进度
+            saveProgress();
+            // 跳转到选择页面
+            window.location.href = '/chinese';
+        }
+
         let nextStoryCooldown = false;
-        
+
         function loadNextStory() {
             // 检查冷却时间
             if (nextStoryCooldown) {
                 return;
             }
-            
+
             const btn = document.getElementById('nextBtn');
             const contentType = document.getElementById('contentType').value;
             const formData = new FormData();
             formData.append('content_type', contentType);
-            
+
             // 开始冷却
             nextStoryCooldown = true;
             btn.disabled = true;
             btn.textContent = '⏳ 请稍候...';
-            
+
             // 5秒后解除冷却
             let countdown = 5;
             const cooldownInterval = setInterval(() => {
                 countdown--;
                 if (countdown > 0) {
-                    btn.textContent = `⏳ ${countdown}秒后可用`;
+                    btn.textContent = `⏳ ${countdown}秒`;
                 } else {
                     clearInterval(cooldownInterval);
                     nextStoryCooldown = false;
                     btn.disabled = false;
-                    btn.textContent = '📖 下一个故事';
+                    btn.textContent = '📖 下一个';
                 }
             }, 1000);
 
@@ -321,6 +379,8 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
+                        // 清除今天的进度
+                        localStorage.removeItem(STORAGE_KEY);
                         document.querySelector('.modal-content').innerHTML = `
                         <div class="modal-emoji">🌟</div>
                         <h2 class="modal-title">太棒了！</h2>
@@ -331,8 +391,17 @@
                 });
         }
 
-        updateTimer();
-        timerInterval = setInterval(updateTimer, 1000);
+        // 如果已经完成，直接显示完成状态
+        if (remainingSeconds <= 0) {
+            const display = document.getElementById('timerDisplay');
+            const countdown = document.getElementById('countdown');
+            countdown.classList.add('complete');
+            display.textContent = '完成！';
+            document.getElementById('completeModal').classList.add('show');
+        } else {
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
     </script>
 </body>
 
