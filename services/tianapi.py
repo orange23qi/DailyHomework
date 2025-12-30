@@ -100,13 +100,17 @@ def fetch_tianapi_content(content_type='fairytales', force_new=False):
     url = f"https://apis.tianapi.com/{actual_type}/index"
     
     # 不同API需要不同参数
-    params = {'key': config.TIANAPI_KEY, 'num': 1}
+    # 使用随机page来获取不同的故事（API每30秒才更新一次，所以需要翻页）
+    random_page = random.randint(1, 50)  # 随机选择1-50页
+    params = {'key': config.TIANAPI_KEY, 'num': 1, 'page': random_page}
     
     # story API可以通过type区分故事类型
     if content_type == 'fairytales':
         params['type'] = 3  # 童话故事
     elif content_type == 'story':
         params['type'] = 4  # 寓言故事
+    
+    print(f"API请求参数: page={random_page}, type={params.get('type', '不指定')}")
     
     try:
         response = requests.get(url, params=params, timeout=10)
