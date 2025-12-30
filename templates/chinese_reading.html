@@ -264,10 +264,37 @@
             }
         }
 
+        let nextStoryCooldown = false;
+        
         function loadNextStory() {
+            // 检查冷却时间
+            if (nextStoryCooldown) {
+                return;
+            }
+            
+            const btn = document.getElementById('nextBtn');
             const contentType = document.getElementById('contentType').value;
             const formData = new FormData();
             formData.append('content_type', contentType);
+            
+            // 开始冷却
+            nextStoryCooldown = true;
+            btn.disabled = true;
+            btn.textContent = '⏳ 请稍候...';
+            
+            // 5秒后解除冷却
+            let countdown = 5;
+            const cooldownInterval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    btn.textContent = `⏳ ${countdown}秒后可用`;
+                } else {
+                    clearInterval(cooldownInterval);
+                    nextStoryCooldown = false;
+                    btn.disabled = false;
+                    btn.textContent = '📖 下一个故事';
+                }
+            }, 1000);
 
             fetch('/chinese/next', { method: 'POST', body: formData })
                 .then(r => r.json())

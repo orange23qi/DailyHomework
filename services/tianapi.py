@@ -16,7 +16,7 @@ except ImportError:
 
 # 简单的内存缓存：每种类型缓存多条内容，避免频繁调用API
 _content_cache = {}  # {content_type: [content1, content2, ...]}
-_cache_size = 5  # 每种类型最多缓存5条
+_cache_size = 10  # 每种类型最多缓存10条
 _last_api_call = 0  # 上次API调用时间
 _api_cooldown = 2  # API调用间隔（秒）
 
@@ -81,10 +81,16 @@ def fetch_tianapi_content(content_type='fairytales', force_new=False):
     # 检查API调用频率限制
     now = time.time()
     if now - _last_api_call < _api_cooldown:
-        print(f"API调用过于频繁，跳过")
+        print(f"API调用过于频繁，等待冷却...")
+        # 如果缓存中有多个故事，尝试返回一个不同的
+        if content_type in _content_cache and len(_content_cache[content_type]) > 1:
+            item = random.choice(_content_cache[content_type])
+            print(f"冷却期间从缓存获取({content_type}): {item.get('title', '')}")
+            return item
         return None
     
     _last_api_call = now
+    print(f"正在调用TianAPI获取新故事({content_type})...")
     
     # fairytales API需要id参数，改用story API的type=3
     actual_type = content_type

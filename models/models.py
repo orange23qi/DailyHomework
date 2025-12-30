@@ -315,12 +315,12 @@ def get_practice_history_by_days(days: int = 7) -> List[Dict]:
     now = get_current_time()
     start_date = (now - timedelta(days=days)).strftime('%Y-%m-%d')
     
-    # 获取数学练习记录
+    # 获取数学练习记录（只获取已完成的，即 accuracy 不为空的）
     cursor.execute('''
         SELECT p.*, 
                (SELECT COUNT(*) FROM question WHERE practice_id = p.id) as total_questions
         FROM practice p
-        WHERE p.date >= ?
+        WHERE p.date >= ? AND p.accuracy IS NOT NULL
         ORDER BY p.start_time DESC
     ''', (start_date,))
     
