@@ -20,27 +20,51 @@ app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 
 
+def get_current_user():
+    """获取当前用户名（从 session 获取，默认第一个用户）"""
+    user = session.get('current_user')
+    if not user or user not in config.USERS:
+        user = config.USERS[0] if config.USERS else '宝宝'
+        session['current_user'] = user
+    return user
+
+
+@app.route('/switch-user', methods=['POST'])
+def switch_user():
+    """切换用户"""
+    user_name = request.form.get('user_name', '')
+    if user_name in config.USERS:
+        session['current_user'] = user_name
+    return redirect(url_for('index'))
+
+
 @app.route('/')
 def index():
     """主页 - 学科分类"""
-    # 获取最近7天的练习记录
-    history = get_practice_history_by_days(7)
-    # 获取数学统计图表数据
-    math_stats = get_math_stats_for_chart(7)
-    return render_template('index.html', history=history, math_stats=math_stats)
+    current_user = get_current_user()
+    # 获取最近7天的练习记录（按当前用户筛选）
+    history = get_practice_history_by_days(7, user_name=current_user)
+    # 获取数学统计图表数据（按当前用户筛选）
+    math_stats = get_math_stats_for_chart(7, user_name=current_user)
+    return render_template('index.html', 
+                         history=history, 
+                         math_stats=math_stats,
+                         users=config.USERS,
+                         current_user=current_user)
 
 
 @app.route('/math')
 def math_practice():
     """数学练习页面"""
+    current_user = get_current_user()
     # 生成题目
     questions = generate_questions(
         count=config.MATH_QUESTION_COUNT,
         max_number=config.MATH_MAX_NUMBER
     )
     
-    # 创建练习记录
-    practice_id = create_practice('数学', questions)
+    # 创建练习记录（关联当前用户）
+    practice_id = create_practice('数学', questions, user_name=current_user)
     
     # 保存题目到 session
     session['questions'] = questions
@@ -48,7 +72,8 @@ def math_practice():
     
     return render_template('math_practice.html', 
                          questions=questions, 
-                         practice_id=practice_id)
+                         practice_id=practice_id,
+                         current_user=current_user)
 
 
 @app.route('/math/submit', methods=['POST'])
@@ -139,6 +164,7 @@ def chinese_select():
 @app.route('/chinese/<content_type>')
 def chinese_reading_type(content_type):
     """语文阅读页面 - 指定内容类型"""
+    current_user = get_current_user()
     # 根据类型获取内容
     if content_type == 'local':
         # 本地经典故事
@@ -160,8 +186,8 @@ def chinese_reading_type(content_type):
             from generators.stories import get_random_story as get_local_story
             story = get_local_story()
     
-    # 创建阅读记录
-    record_id = create_reading_record(story.get('id', 'unknown'), story['title'])
+    # 创建阅读记录（关联当前用户）
+    record_id = create_reading_record(story.get('id', 'unknown'), story['title'], user_name=current_user)
     
     # 只保存必要的 ID 到 session（避免 cookie 过大）
     session['reading_record_id'] = record_id
@@ -171,7 +197,8 @@ def chinese_reading_type(content_type):
                          story=story, 
                          record_id=record_id,
                          content_type=content_type,
-                         reading_duration=config.READING_DURATION_MINUTES)
+                         reading_duration=config.READING_DURATION_MINUTES,
+                         current_user=current_user)
 
 
 @app.route('/chinese/complete', methods=['POST'])

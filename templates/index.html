@@ -162,8 +162,23 @@
 <body>
     <div class="container">
         <header class="header">
+            {% if users|length > 1 %}
+            <div class="user-selector" style="margin-bottom: 15px;">
+                {% for user in users %}
+                <form action="{{ url_for('switch_user') }}" method="post" style="display: inline;">
+                    <input type="hidden" name="user_name" value="{{ user }}">
+                    <button type="submit" class="user-btn {% if user == current_user %}active{% endif %}" style="padding: 8px 20px; border-radius: 20px; border: 2px solid {% if user == current_user %}#667eea{% else %}#e2e8f0{% endif %}; 
+                                   background: {% if user == current_user %}linear-gradient(135deg, #667eea 0%, #764ba2 100%){% else %}white{% endif %};
+                                   color: {% if user == current_user %}white{% else %}#64748b{% endif %};
+                                   font-size: 1.1rem; font-weight: 600; cursor: pointer; margin: 0 5px;">
+                        {{ user }} {% if user == current_user %}✓{% endif %}
+                    </button>
+                </form>
+                {% endfor %}
+            </div>
+            {% endif %}
             <h1>📚 每日作业</h1>
-            <p class="subtitle">让学习变得更有趣！</p>
+            <p class="subtitle">{% if current_user %}{{ current_user }}，{% endif %}让学习变得更有趣！</p>
             <p class="date" id="currentDate"></p>
         </header>
 
@@ -274,8 +289,8 @@
         let mathChart = null;
         const initialData = {
             labels: {{ math_stats.labels | tojson if math_stats else '[]' }},
-        accuracy: {{ math_stats.accuracy | tojson if math_stats else '[]'}},
-        duration: {{ math_stats.duration | tojson if math_stats else '[]'}}
+        accuracy: { { math_stats.accuracy | tojson if math_stats else '[]' } },
+        duration: { { math_stats.duration | tojson if math_stats else '[]' } }
         };
 
         function createChart(data) {

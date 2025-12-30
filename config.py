@@ -2,6 +2,7 @@
 """配置文件"""
 
 import os
+import json
 
 # Server酱配置
 # 请将 YOUR_SENDKEY 替换为您的实际 SendKey
@@ -46,3 +47,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'daily-homework-secret-key-2024')
 DEBUG = True
 HOST = '0.0.0.0'  # 允许局域网访问
 PORT = 5000
+
+# 用户列表配置
+# 从环境变量读取 JSON 格式的用户列表，默认只有一个用户"宝宝"
+USERS = json.loads(os.environ.get('USERS', '["宝宝"]'))

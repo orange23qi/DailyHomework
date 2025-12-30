@@ -47,6 +47,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS practice (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_name TEXT DEFAULT '宝宝',
             date TEXT NOT NULL,
             subject TEXT NOT NULL,
             start_time TEXT NOT NULL,
@@ -82,6 +83,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS reading_record (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_name TEXT DEFAULT '宝宝',
             date TEXT NOT NULL,
             story_id INTEGER NOT NULL,
             story_title TEXT NOT NULL,
@@ -93,17 +95,29 @@ def init_db():
         )
     ''')
     
+    # 数据库升级：为旧表添加 user_name 字段（如果不存在）
+    try:
+        cursor.execute('ALTER TABLE practice ADD COLUMN user_name TEXT DEFAULT "宝宝"')
+    except sqlite3.OperationalError:
+        pass  # 列已存在
+    
+    try:
+        cursor.execute('ALTER TABLE reading_record ADD COLUMN user_name TEXT DEFAULT "宝宝"')
+    except sqlite3.OperationalError:
+        pass  # 列已存在
+    
     conn.commit()
     conn.close()
 
 
-def create_practice(subject: str, questions: List[Dict]) -> int:
+def create_practice(subject: str, questions: List[Dict], user_name: str = '宝宝') -> int:
     """
     创建新的练习记录
     
     Args:
         subject: 学科
         questions: 题目列表
+        user_name: 用户名
         
     Returns:
         practice_id
@@ -116,9 +130,9 @@ def create_practice(subject: str, questions: List[Dict]) -> int:
     start_time = now.strftime('%Y-%m-%d %H:%M:%S')
     
     cursor.execute('''
-        INSERT INTO practice (date, subject, start_time, total_questions)
-        VALUES (?, ?, ?, ?)
-    ''', (date_str, subject, start_time, len(questions)))
+        INSERT INTO practice (user_name, date, subject, start_time, total_questions)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_name, date_str, subject, start_time, len(questions)))
     
     practice_id = cursor.lastrowid
     
@@ -313,12 +327,13 @@ def format_duration(seconds: int) -> str:
     return f"{secs}秒"
 
 
-def get_practice_history_by_days(days: int = 7) -> List[Dict]:
+def get_practice_history_by_days(days: int = 7, user_name: str = None) -> List[Dict]:
     """
     获取最近N天的练习记录（包括数学和语文）
     
     Args:
         days: 天数
+        user_name: 用户名（如果为None则返回所有用户的记录）
         
     Returns:
         练习记录列表
@@ -331,13 +346,22 @@ def get_practice_history_by_days(days: int = 7) -> List[Dict]:
     start_date = (now - timedelta(days=days)).strftime('%Y-%m-%d')
     
     # 获取数学练习记录（只获取已完成的，即 accuracy 不为空的）
-    cursor.execute('''
-        SELECT p.*, 
-               (SELECT COUNT(*) FROM question WHERE practice_id = p.id) as total_questions
-        FROM practice p
-        WHERE p.date >= ? AND p.accuracy IS NOT NULL
-        ORDER BY p.start_time DESC
-    ''', (start_date,))
+    if user_name:
+        cursor.execute('''
+            SELECT p.*, 
+                   (SELECT COUNT(*) FROM question WHERE practice_id = p.id) as total_questions
+            FROM practice p
+            WHERE p.date >= ? AND p.accuracy IS NOT NULL AND p.user_name = ?
+            ORDER BY p.start_time DESC
+        ''', (start_date, user_name))
+    else:
+        cursor.execute('''
+            SELECT p.*, 
+                   (SELECT COUNT(*) FROM question WHERE practice_id = p.id) as total_questions
+            FROM practice p
+            WHERE p.date >= ? AND p.accuracy IS NOT NULL
+            ORDER BY p.start_time DESC
+        ''', (start_date,))
     
     practices = []
     for row in cursor.fetchall():
@@ -360,15 +384,23 @@ def get_practice_history_by_days(days: int = 7) -> List[Dict]:
             'total': row['total_questions'],
             'correct': row['correct_count'],
             'accuracy': row['accuracy'],
-            'is_corrected': row['is_corrected']
+            'is_corrected': row['is_corrected'],
+            'user_name': row['user_name'] if 'user_name' in row.keys() else '宝宝'
         })
     
     # 获取语文阅读记录
-    cursor.execute('''
-        SELECT * FROM reading_record
-        WHERE date >= ? AND completed = 1
-        ORDER BY start_time DESC
-    ''', (start_date,))
+    if user_name:
+        cursor.execute('''
+            SELECT * FROM reading_record
+            WHERE date >= ? AND completed = 1 AND user_name = ?
+            ORDER BY start_time DESC
+        ''', (start_date, user_name))
+    else:
+        cursor.execute('''
+            SELECT * FROM reading_record
+            WHERE date >= ? AND completed = 1
+            ORDER BY start_time DESC
+        ''', (start_date,))
     
     for row in cursor.fetchall():
         start_time = row['start_time']
@@ -390,7 +422,8 @@ def get_practice_history_by_days(days: int = 7) -> List[Dict]:
             'total': None,
             'correct': None,
             'accuracy': None,
-            'is_corrected': None
+            'is_corrected': None,
+            'user_name': row['user_name'] if 'user_name' in row.keys() else '宝宝'
         })
     
     # 按时间排序
@@ -400,12 +433,13 @@ def get_practice_history_by_days(days: int = 7) -> List[Dict]:
     return practices
 
 
-def get_math_stats_for_chart(days: int = 7) -> Dict:
+def get_math_stats_for_chart(days: int = 7, user_name: str = None) -> Dict:
     """
     获取数学统计数据用于图表显示
     
     Args:
         days: 天数
+        user_name: 用户名（如果为None则返回所有用户的统计）
         
     Returns:
         {labels: [], accuracy: [], duration: []}
@@ -416,13 +450,22 @@ def get_math_stats_for_chart(days: int = 7) -> Dict:
     now = get_current_time()
     start_date = (now - timedelta(days=days)).strftime('%Y-%m-%d')
     
-    cursor.execute('''
-        SELECT date, AVG(accuracy) as avg_accuracy, AVG(duration_seconds) as avg_duration
-        FROM practice
-        WHERE subject = '数学' AND date >= ? AND accuracy IS NOT NULL
-        GROUP BY date
-        ORDER BY date ASC
-    ''', (start_date,))
+    if user_name:
+        cursor.execute('''
+            SELECT date, AVG(accuracy) as avg_accuracy, AVG(duration_seconds) as avg_duration
+            FROM practice
+            WHERE subject = '数学' AND date >= ? AND accuracy IS NOT NULL AND user_name = ?
+            GROUP BY date
+            ORDER BY date ASC
+        ''', (start_date, user_name))
+    else:
+        cursor.execute('''
+            SELECT date, AVG(accuracy) as avg_accuracy, AVG(duration_seconds) as avg_duration
+            FROM practice
+            WHERE subject = '数学' AND date >= ? AND accuracy IS NOT NULL
+            GROUP BY date
+            ORDER BY date ASC
+        ''', (start_date,))
     
     labels = []
     accuracy = []
@@ -442,13 +485,14 @@ def get_math_stats_for_chart(days: int = 7) -> Dict:
     }
 
 
-def create_reading_record(story_id: int, story_title: str) -> int:
+def create_reading_record(story_id: int, story_title: str, user_name: str = '宝宝') -> int:
     """
     创建阅读记录
     
     Args:
         story_id: 故事ID
         story_title: 故事标题
+        user_name: 用户名
         
     Returns:
         record_id
@@ -461,9 +505,9 @@ def create_reading_record(story_id: int, story_title: str) -> int:
     start_time = now.strftime('%Y-%m-%d %H:%M:%S')
     
     cursor.execute('''
-        INSERT INTO reading_record (date, story_id, story_title, start_time)
-        VALUES (?, ?, ?, ?)
-    ''', (date_str, story_id, story_title, start_time))
+        INSERT INTO reading_record (user_name, date, story_id, story_title, start_time)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_name, date_str, story_id, story_title, start_time))
     
     record_id = cursor.lastrowid
     
