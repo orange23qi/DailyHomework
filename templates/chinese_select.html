@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>语文阅读 - 选择内容</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .category-card {
+            background: white;
+            border-radius: 24px;
+            padding: 35px 25px;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+
+        .category-card:hover,
+        .category-card:active {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+            border-color: #667eea;
+        }
+
+        .category-icon {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+        }
+
+        .category-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .category-desc {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .category-card.fairytales {
+            background: linear-gradient(135deg, #fef5e7 0%, #fde9d0 100%);
+        }
+
+        .category-card.story {
+            background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
+        }
+
+        .category-card.riddle {
+            background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%);
+        }
+
+        .category-card.rkl {
+            background: linear-gradient(135deg, #fdf4ff 0%, #f5d0fe 100%);
+        }
+
+        .category-card.naowan {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        }
+
+        .category-card.local {
+            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+        }
+
+        .tip-box {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .tip-box h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+        }
+
+        .tip-box p {
+            margin: 0;
+            color: #666;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a href="{{ url_for('index') }}" class="back-link">← 返回主页</a>
+
+        <header class="header">
+            <h1>📖 选择阅读内容</h1>
+            <p class="subtitle">小朋友，你今天想看什么呀？</p>
+        </header>
+
+        <div class="category-grid">
+            <a href="{{ url_for('chinese_reading_type', content_type='fairytales') }}" class="category-card fairytales">
+                <div class="category-icon">🧚</div>
+                <div class="category-name">童话故事</div>
+                <div class="category-desc">美丽的童话世界</div>
+            </a>
+
+            <a href="{{ url_for('chinese_reading_type', content_type='story') }}" class="category-card story">
+                <div class="category-icon">📚</div>
+                <div class="category-name">故事大全</div>
+                <div class="category-desc">有趣的故事</div>
+            </a>
+
+            <a href="{{ url_for('chinese_reading_type', content_type='riddle') }}" class="category-card riddle">
+                <div class="category-icon">🤔</div>
+                <div class="category-name">谜语大全</div>
+                <div class="category-desc">猜猜看是什么</div>
+            </a>
+
+            <a href="{{ url_for('chinese_reading_type', content_type='rkl') }}" class="category-card rkl">
+                <div class="category-icon">👅</div>
+                <div class="category-name">绕口令</div>
+                <div class="category-desc">锻炼口才</div>
+            </a>
+
+            <a href="{{ url_for('chinese_reading_type', content_type='naowan') }}" class="category-card naowan">
+                <div class="category-icon">💡</div>
+                <div class="category-name">脑筋急转弯</div>
+                <div class="category-desc">动动小脑筋</div>
+            </a>
+
+            <a href="{{ url_for('chinese_reading_type', content_type='local') }}" class="category-card local">
+                <div class="category-icon">🐸</div>
+                <div class="category-name">经典故事</div>
+                <div class="category-desc">小蝌蚪找妈妈...</div>
+            </a>
+        </div>
+
+        <div class="tip-box">
+            <h3>💡 小提示</h3>
+            <p>点击上方卡片开始阅读，阅读时间 {{ reading_duration }} 分钟</p>
+        </div>
+    </div>
+</body>
+
+</html>

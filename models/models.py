@@ -10,8 +10,8 @@ import config
 
 
 def get_current_time():
-    """获取当前时区的时间"""
-    utc_now = datetime.now(timezone.utc)
+    """获取当前时区的时间（返回无时区datetime）"""
+    utc_now = datetime.utcnow()
     local_time = utc_now + timedelta(hours=config.TIMEZONE_OFFSET_HOURS)
     return local_time
 
@@ -60,6 +60,21 @@ def init_db():
             corrected_answer INTEGER,
             is_corrected INTEGER DEFAULT 0,
             FOREIGN KEY (practice_id) REFERENCES practice (id)
+        )
+    ''')
+    
+    # 创建阅读记录表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS reading_record (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            story_id INTEGER NOT NULL,
+            story_title TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT,
+            duration_seconds INTEGER,
+            completed INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     
@@ -281,6 +296,210 @@ def format_duration(seconds: int) -> str:
     if minutes > 0:
         return f"{minutes}分{secs}秒"
     return f"{secs}秒"
+
+
+def get_practice_history_by_days(days: int = 7) -> List[Dict]:
+    """
+    获取最近N天的练习记录（包括数学和语文）
+    
+    Args:
+        days: 天数
+        
+    Returns:
+        练习记录列表
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 计算起始日期
+    now = get_current_time()
+    start_date = (now - timedelta(days=days)).strftime('%Y-%m-%d')
+    
+    # 获取数学练习记录
+    cursor.execute('''
+        SELECT p.*, 
+               (SELECT COUNT(*) FROM question WHERE practice_id = p.id) as total_questions
+        FROM practice p
+        WHERE p.date >= ?
+        ORDER BY p.start_time DESC
+    ''', (start_date,))
+    
+    practices = []
+    for row in cursor.fetchall():
+        start_time = row['start_time']
+        if start_time:
+            try:
+                dt = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')
+                date_display = dt.strftime('%Y-%m-%d %H:%M')
+            except:
+                date_display = row['date']
+        else:
+            date_display = row['date']
+        
+        practices.append({
+            'id': row['id'],
+            'date': date_display,
+            'start_time': start_time,
+            'subject': row['subject'],
+            'duration': format_duration(row['duration_seconds']) if row['duration_seconds'] else '-',
+            'total': row['total_questions'],
+            'correct': row['correct_count'],
+            'accuracy': row['accuracy'],
+            'is_corrected': row['is_corrected']
+        })
+    
+    # 获取语文阅读记录
+    cursor.execute('''
+        SELECT * FROM reading_record
+        WHERE date >= ? AND completed = 1
+        ORDER BY start_time DESC
+    ''', (start_date,))
+    
+    for row in cursor.fetchall():
+        start_time = row['start_time']
+        if start_time:
+            try:
+                dt = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')
+                date_display = dt.strftime('%Y-%m-%d %H:%M')
+            except:
+                date_display = row['date']
+        else:
+            date_display = row['date']
+        
+        practices.append({
+            'id': f"reading_{row['id']}",
+            'date': date_display,
+            'start_time': start_time,
+            'subject': '语文',
+            'duration': format_duration(row['duration_seconds']) if row['duration_seconds'] else '-',
+            'total': None,
+            'correct': None,
+            'accuracy': None,
+            'is_corrected': None
+        })
+    
+    # 按时间排序
+    practices.sort(key=lambda x: x.get('start_time', ''), reverse=True)
+    
+    conn.close()
+    return practices
+
+
+def get_math_stats_for_chart(days: int = 7) -> Dict:
+    """
+    获取数学统计数据用于图表显示
+    
+    Args:
+        days: 天数
+        
+    Returns:
+        {labels: [], accuracy: [], duration: []}
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    now = get_current_time()
+    start_date = (now - timedelta(days=days)).strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        SELECT date, AVG(accuracy) as avg_accuracy, AVG(duration_seconds) as avg_duration
+        FROM practice
+        WHERE subject = '数学' AND date >= ? AND accuracy IS NOT NULL
+        GROUP BY date
+        ORDER BY date ASC
+    ''', (start_date,))
+    
+    labels = []
+    accuracy = []
+    duration = []
+    
+    for row in cursor.fetchall():
+        labels.append(row['date'][5:])  # 只显示 MM-DD
+        accuracy.append(round(row['avg_accuracy'], 1) if row['avg_accuracy'] else 0)
+        duration.append(round(row['avg_duration'] / 60, 1) if row['avg_duration'] else 0)  # 转换为分钟
+    
+    conn.close()
+    
+    return {
+        'labels': labels,
+        'accuracy': accuracy,
+        'duration': duration
+    }
+
+
+def create_reading_record(story_id: int, story_title: str) -> int:
+    """
+    创建阅读记录
+    
+    Args:
+        story_id: 故事ID
+        story_title: 故事标题
+        
+    Returns:
+        record_id
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    now = get_current_time()
+    date_str = now.strftime('%Y-%m-%d')
+    start_time = now.strftime('%Y-%m-%d %H:%M:%S')
+    
+    cursor.execute('''
+        INSERT INTO reading_record (date, story_id, story_title, start_time)
+        VALUES (?, ?, ?, ?)
+    ''', (date_str, story_id, story_title, start_time))
+    
+    record_id = cursor.lastrowid
+    
+    conn.commit()
+    conn.close()
+    
+    return record_id
+
+
+def complete_reading(record_id: int) -> Dict:
+    """
+    完成阅读记录
+    
+    Args:
+        record_id: 阅读记录ID
+        
+    Returns:
+        阅读结果
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 获取记录
+    cursor.execute('SELECT * FROM reading_record WHERE id = ?', (record_id,))
+    record = cursor.fetchone()
+    
+    if not record:
+        conn.close()
+        return None
+    
+    now = get_current_time()
+    end_time = now.strftime('%Y-%m-%d %H:%M:%S')
+    
+    start = datetime.strptime(record['start_time'], '%Y-%m-%d %H:%M:%S')
+    duration = int((now - start).total_seconds())
+    
+    cursor.execute('''
+        UPDATE reading_record SET end_time = ?, duration_seconds = ?, completed = 1
+        WHERE id = ?
+    ''', (end_time, duration, record_id))
+    
+    conn.commit()
+    conn.close()
+    
+    return {
+        'record_id': record_id,
+        'story_title': record['story_title'],
+        'duration_seconds': duration,
+        'duration_display': format_duration(duration),
+        'date': record['date']
+    }
 
 
 # 初始化数据库

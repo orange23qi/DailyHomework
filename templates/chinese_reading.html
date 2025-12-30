@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>语文阅读 - {{ story.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .reading-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .countdown-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .countdown-box.paused {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .countdown-box.complete {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .ctrl-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ctrl-btn.pause {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .ctrl-btn.next {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .ctrl-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .story-card {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            margin-top: 100px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .story-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .story-icon {
+            font-size: 4rem;
+            margin-bottom: 10px;
+        }
+
+        .story-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin: 0;
+        }
+
+        .story-content {
+            font-size: 1.6rem;
+            line-height: 2.8;
+            color: #2d3748;
+            text-align: justify;
+        }
+
+        .story-content p {
+            margin-bottom: 20px;
+            text-indent: 2em;
+        }
+
+        ruby {
+            ruby-position: over;
+        }
+
+        rt {
+            font-size: 0.5em;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .complete-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .complete-modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            max-width: 450px;
+            margin: 20px;
+        }
+
+        .modal-emoji {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .modal-message {
+            font-size: 1.1rem;
+            color: #718096;
+            margin-bottom: 25px;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .paused-indicator {
+            animation: pulse 1s ease-in-out infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container reading-container">
+        <a href="{{ url_for('index') }}" class="back-link">← 返回主页</a>
+
+        <div class="top-bar">
+            <div class="countdown-box" id="countdown">
+                <span>⏱️</span>
+                <span id="timerDisplay">{{ reading_duration }}:00</span>
+            </div>
+            <div class="control-buttons">
+                <button class="ctrl-btn pause" id="pauseBtn" onclick="togglePause()">⏸️ 暂停</button>
+                <button class="ctrl-btn next" id="nextBtn" onclick="loadNextStory()">📖 下一个故事</button>
+            </div>
+        </div>
+
+        <div class="story-card" id="storyCard">
+            <div class="story-header">
+                <div class="story-icon" id="storyIcon">{{ story.image }}</div>
+                <h1 class="story-title" id="storyTitle">{{ story.title }}</h1>
+            </div>
+            <div class="story-content" id="storyContent">{{ story.content | safe }}</div>
+        </div>
+    </div>
+
+    <div class="complete-modal" id="completeModal">
+        <div class="modal-content">
+            <div class="modal-emoji">🎉</div>
+            <h2 class="modal-title">阅读时间到！</h2>
+            <p class="modal-message">恭喜你完成了今天的阅读任务！</p>
+            <button class="btn btn-primary btn-block" id="confirmBtn" onclick="confirmReading()">✅ 确认完成</button>
+        </div>
+    </div>
+
+    <input type="hidden" id="recordId" value="{{ record_id }}">
+    <input type="hidden" id="currentStoryId" value="{{ story.id }}">
+    <input type="hidden" id="contentType" value="{{ content_type|default('local') }}">
+
+    <script>
+        const READING_DURATION = {{ reading_duration }} * 60;
+        let remainingSeconds = READING_DURATION;
+        let timerInterval;
+        let isPaused = false;
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimer() {
+            if (isPaused) return;
+            const display = document.getElementById('timerDisplay');
+            const countdown = document.getElementById('countdown');
+            display.textContent = formatTime(remainingSeconds);
+
+            if (remainingSeconds <= 0) {
+                clearInterval(timerInterval);
+                countdown.classList.add('complete');
+                display.textContent = '完成！';
+                document.getElementById('completeModal').classList.add('show');
+            }
+            remainingSeconds--;
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('pauseBtn');
+            const countdown = document.getElementById('countdown');
+            if (isPaused) {
+                btn.textContent = '▶️ 继续';
+                countdown.classList.add('paused', 'paused-indicator');
+            } else {
+                btn.textContent = '⏸️ 暂停';
+                countdown.classList.remove('paused', 'paused-indicator');
+            }
+        }
+
+        function loadNextStory() {
+            const contentType = document.getElementById('contentType').value;
+            const formData = new FormData();
+            formData.append('content_type', contentType);
+
+            fetch('/chinese/next', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('storyIcon').textContent = data.story.image;
+                        document.getElementById('storyTitle').textContent = data.story.title;
+                        document.getElementById('storyContent').innerHTML = data.story.content;
+                        document.getElementById('currentStoryId').value = data.story.id;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                });
+        }
+
+        function confirmReading() {
+            const btn = document.getElementById('confirmBtn');
+            const recordId = document.getElementById('recordId').value;
+            btn.textContent = '提交中...';
+
+            const formData = new FormData();
+            formData.append('record_id', recordId);
+
+            fetch('/chinese/complete', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.querySelector('.modal-content').innerHTML = `
+                        <div class="modal-emoji">🌟</div>
+                        <h2 class="modal-title">太棒了！</h2>
+                        <p class="modal-message">阅读已记录！</p>
+                        <a href="/" class="btn btn-success btn-block">🏠 返回主页</a>
+                    `;
+                    }
+                });
+        }
+
+        updateTimer();
+        timerInterval = setInterval(updateTimer, 1000);
+    </script>
+</body>
+
+</html>

@@ -8,6 +8,155 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>每日作业 - 学习小助手</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .subject-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .tag-math {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .tag-chinese {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .tag-english {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .chart-tabs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chart-tab {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .chart-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .chart-wrapper {
+            height: 200px;
+        }
+
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .record-header .section-title {
+            margin: 0;
+        }
+
+        .subject-filters {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-tag {
+            padding: 6px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            color: #64748b;
+        }
+
+        .filter-tag:hover {
+            border-color: #667eea;
+        }
+
+        .filter-tag.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        .filter-tag.tag-math.active {
+            background: #1e40af;
+            border-color: #1e40af;
+        }
+
+        .filter-tag.tag-chinese.active {
+            background: #166534;
+            border-color: #166534;
+        }
+
+        .chart-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 150px;
+            color: #94a3b8;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        .empty-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .empty-hint {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 
 <body>
@@ -20,11 +169,11 @@
 
         <div class="subject-grid">
             <!-- 语文 -->
-            <div class="subject-card chinese disabled">
+            <a href="{{ url_for('chinese_select') }}" class="subject-card chinese active">
                 <div class="subject-icon">📖</div>
                 <div class="subject-name">语文</div>
-                <div class="subject-desc">敬请期待...</div>
-            </div>
+                <div class="subject-desc">30分钟阅读</div>
+            </a>
 
             <!-- 数学 -->
             <a href="{{ url_for('math_practice') }}" class="subject-card math active">
@@ -43,7 +192,37 @@
 
         {% if history %}
         <div class="card">
-            <h2 class="section-title">📊 最近练习记录</h2>
+            <div class="record-header">
+                <h2 class="section-title">📊 最近7天练习记录</h2>
+                <div class="subject-filters">
+                    <button class="filter-tag active" onclick="filterBySubject('all', this)">全部</button>
+                    <button class="filter-tag tag-math" onclick="filterBySubject('数学', this)">🔢 数学</button>
+                    <button class="filter-tag tag-chinese" onclick="filterBySubject('语文', this)">📖 语文</button>
+                </div>
+            </div>
+
+            <!-- 数学统计图表 - 默认隐藏，点击数学TAG时显示 -->
+            <div class="chart-container" id="mathChartSection" style="display: none; margin-bottom: 20px;">
+                <div class="chart-header">
+                    <div class="chart-title">📈 数学练习趋势</div>
+                    <div class="chart-tabs">
+                        <button class="chart-tab active" onclick="loadChart(7)">7天</button>
+                        <button class="chart-tab" onclick="loadChart(30)">30天</button>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    {% if math_stats and math_stats.labels %}
+                    <canvas id="mathChart"></canvas>
+                    {% else %}
+                    <div class="chart-empty">
+                        <div class="empty-icon">📊</div>
+                        <div class="empty-text">暂无数据</div>
+                        <div class="empty-hint">完成更多数学练习后，这里会显示趋势图哦！</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
             <table class="history-table">
                 <thead>
                     <tr>
@@ -53,11 +232,19 @@
                         <th>正确率</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for record in history[:5] %}
-                    <tr>
+                <tbody id="historyBody">
+                    {% for record in history %}
+                    <tr data-subject="{{ record.subject }}">
                         <td>{{ record.date }}</td>
-                        <td>{{ record.subject }}</td>
+                        <td>
+                            {% if record.subject == '数学' %}
+                            <span class="subject-tag tag-math">🔢 数学</span>
+                            {% elif record.subject == '语文' %}
+                            <span class="subject-tag tag-chinese">📖 语文</span>
+                            {% else %}
+                            <span class="subject-tag tag-english">🔤 {{ record.subject }}</span>
+                            {% endif %}
+                        </td>
                         <td>{{ record.duration }}</td>
                         <td>
                             {% if record.accuracy is not none %}
@@ -82,6 +269,130 @@
         const now = new Date();
         const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
         document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', options);
+
+        // 图表数据
+        let mathChart = null;
+        const initialData = {
+            labels: {{ math_stats.labels | tojson if math_stats else '[]' }},
+        accuracy: {{ math_stats.accuracy | tojson if math_stats else '[]'}},
+        duration: {{ math_stats.duration | tojson if math_stats else '[]'}}
+        };
+
+        function createChart(data) {
+            const ctx = document.getElementById('mathChart');
+            if (!ctx) return;
+
+            if (mathChart) {
+                mathChart.destroy();
+            }
+
+            mathChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: '正确率 (%)',
+                            data: data.accuracy,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: '用时 (分钟)',
+                            data: data.duration,
+                            borderColor: '#f093fb',
+                            backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            min: 0,
+                            max: 100,
+                            title: { display: true, text: '正确率 (%)' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 0,
+                            title: { display: true, text: '用时 (分钟)' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadChart(days) {
+            // 更新tab样式
+            document.querySelectorAll('.chart-tab').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(days)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // 加载数据
+            fetch(`/api/math-stats?days=${days}`)
+                .then(r => r.json())
+                .then(data => createChart(data))
+                .catch(() => createChart(initialData));
+        }
+
+        // 初始化图表
+        if (initialData.labels.length > 0) {
+            createChart(initialData);
+        }
+
+        // 学科筛选功能
+        function filterBySubject(subject, elem) {
+            // 更新按钮样式
+            document.querySelectorAll('.filter-tag').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            elem.classList.add('active');
+
+            // 筛选表格行
+            const rows = document.querySelectorAll('#historyBody tr');
+            rows.forEach(row => {
+                if (subject === 'all' || row.dataset.subject === subject) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // 控制图表显示
+            const chartSection = document.getElementById('mathChartSection');
+            if (chartSection) {
+                if (subject === '数学') {
+                    chartSection.style.display = 'block';
+                    // 首次显示时初始化图表
+                    if (!mathChart && initialData.labels.length > 0) {
+                        createChart(initialData);
+                    }
+                } else {
+                    chartSection.style.display = 'none';
+                }
+            }
+        }
     </script>
 </body>
 

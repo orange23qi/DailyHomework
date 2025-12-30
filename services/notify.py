@@ -90,3 +90,54 @@ if __name__ == '__main__':
         ]
     }
     send_practice_result(test_result)
+
+
+def send_reading_result(result: dict) -> bool:
+    """
+    发送阅读完成通知到家长微信
+    
+    Args:
+        result: 阅读结果字典
+        
+    Returns:
+        是否发送成功
+    """
+    if config.SERVERCHAN_SENDKEY == 'YOUR_SENDKEY':
+        print("警告: Server酱 SendKey 未配置，跳过通知发送")
+        return False
+    
+    now = datetime.now()
+    date_str = now.strftime('%Y年%m月%d日')
+    title = f"📖 {date_str} 语文阅读完成"
+    
+    content = f"""
+## 🎉 阅读完成报告
+
+| 项目 | 内容 |
+|------|------|
+| 📅 日期 | {date_str} |
+| 📚 故事 | {result.get('story_title', '-')} |
+| ⏱️ 阅读时长 | {result.get('duration_display', '-')} |
+
+> 🌟 小朋友完成了今天的阅读任务，太棒了！
+"""
+    
+    url = f"https://sctapi.ftqq.com/{config.SERVERCHAN_SENDKEY}.send"
+    
+    try:
+        response = requests.post(url, data={
+            'title': title,
+            'desp': content
+        }, timeout=10)
+        
+        result_json = response.json()
+        if result_json.get('code') == 0:
+            print(f"阅读通知发送成功")
+            return True
+        else:
+            print(f"阅读通知发送失败: {result_json}")
+            return False
+            
+    except Exception as e:
+        print(f"阅读通知发送异常: {e}")
+        return False

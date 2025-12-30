@@ -1,0 +1,194 @@
+# -*- coding: utf-8 -*-
+"""天行数据API服务 + 拼音转换"""
+
+import requests
+import re
+import time
+import random
+import config
+
+try:
+    from pypinyin import pinyin, Style
+    PYPINYIN_AVAILABLE = True
+except ImportError:
+    PYPINYIN_AVAILABLE = False
+    print("警告: pypinyin未安装，将使用本地故事")
+
+# 简单的内存缓存：每种类型缓存多条内容，避免频繁调用API
+_content_cache = {}  # {content_type: [content1, content2, ...]}
+_cache_size = 5  # 每种类型最多缓存5条
+_last_api_call = 0  # 上次API调用时间
+_api_cooldown = 2  # API调用间隔（秒）
+
+
+def add_pinyin_to_text(text):
+    """
+    将纯中文文本转换为带拼音的HTML
+    
+    Args:
+        text: 纯中文文本
+        
+    Returns:
+        带<ruby>标签的HTML字符串
+    """
+    if not PYPINYIN_AVAILABLE:
+        return f"<p>{text}</p>"
+    
+    result = []
+    # 按段落分割
+    paragraphs = text.strip().split('\n')
+    
+    for para in paragraphs:
+        if not para.strip():
+            continue
+            
+        para_html = []
+        for char in para:
+            if '\u4e00' <= char <= '\u9fff':  # 是汉字
+                py = pinyin(char, style=Style.TONE)[0][0]
+                para_html.append(f'<ruby>{char}<rt>{py}</rt></ruby>')
+            else:
+                para_html.append(char)
+        
+        result.append(f'<p>{"".join(para_html)}</p>')
+    
+    return '\n'.join(result)
+
+
+def fetch_tianapi_content(content_type='fairytales'):
+    """
+    从天行数据API获取内容（带缓存）
+    
+    Args:
+        content_type: 内容类型 (fairytales/story/riddle/rkl/naowan)
+        
+    Returns:
+        dict: {title, content, image, type_name} 或 None
+    """
+    global _content_cache, _last_api_call
+    
+    if config.TIANAPI_KEY == 'YOUR_TIANAPI_KEY':
+        return None
+    
+    # 优先从缓存获取
+    if content_type in _content_cache and _content_cache[content_type]:
+        cached = _content_cache[content_type]
+        item = random.choice(cached)
+        print(f"从缓存获取({content_type}): {item.get('title', '')}")
+        return item
+    
+    # 检查API调用频率限制
+    now = time.time()
+    if now - _last_api_call < _api_cooldown:
+        print(f"API调用过于频繁，跳过")
+        return None
+    
+    _last_api_call = now
+    
+    # fairytales API需要id参数，改用story API的type=3
+    actual_type = content_type
+    if content_type == 'fairytales':
+        actual_type = 'story'
+    
+    url = f"https://apis.tianapi.com/{actual_type}/index"
+    
+    # 不同API需要不同参数
+    params = {'key': config.TIANAPI_KEY, 'num': 1}
+    
+    # story API可以通过type区分故事类型
+    if content_type == 'fairytales':
+        params['type'] = 3  # 童话故事
+    elif content_type == 'story':
+        params['type'] = 4  # 寓言故事
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        
+        if data.get('code') != 200:
+            print(f"TianAPI错误({content_type}): {data.get('msg')}")
+            return None
+        
+        # 处理返回数据（可能是dict或list，或者在result.list中）
+        result = data.get('result', {})
+        
+        # 有些API返回的是 {"list": [...]}
+        if isinstance(result, dict) and 'list' in result:
+            result_list = result.get('list', [])
+            if result_list and len(result_list) > 0:
+                result = result_list[0]
+        elif isinstance(result, list) and len(result) > 0:
+            result = result[0]
+        
+        # 调试：打印返回的数据结构
+        print(f"TianAPI解析后({content_type}): {result}")
+        
+        # 不同接口返回格式处理
+        if content_type == 'riddle':
+            title = "谜语"
+            quest = result.get('quest', '') or result.get('question', '')
+            answer = result.get('answer', '') or result.get('result', '')
+            content = f"谜面：{quest}\n\n（想一想再看答案哦！）\n\n谜底：{answer}"
+            image = "🤔"
+        elif content_type == 'rkl':
+            title = "绕口令"
+            content = result.get('content', '') or result.get('list', '')
+            image = "👅"
+        elif content_type == 'naowan':
+            title = "脑筋急转弯"
+            # 尝试多种可能的字段名
+            quest = result.get('quest', '') or result.get('question', '') or result.get('title', '')
+            answer = result.get('answer', '') or result.get('result', '')
+            content = f"问：{quest}\n\n（想一想再看答案哦！）\n\n答：{answer}"
+            image = "💡"
+        else:
+            title = result.get('title', '故事')
+            content = result.get('content', '')
+            image = "📖"
+        
+        if not content:
+            return None
+        
+        # 添加拼音
+        content_with_pinyin = add_pinyin_to_text(content)
+        
+        result_item = {
+            'title': title,
+            'content': content_with_pinyin,
+            'image': image,
+            'type_name': config.TIANAPI_CONTENT_TYPES.get(content_type, '故事')
+        }
+        
+        # 添加到缓存
+        if content_type not in _content_cache:
+            _content_cache[content_type] = []
+        _content_cache[content_type].append(result_item)
+        # 限制缓存大小
+        if len(_content_cache[content_type]) > _cache_size:
+            _content_cache[content_type].pop(0)
+        
+        return result_item
+        
+    except Exception as e:
+        print(f"TianAPI请求异常({content_type}): {e}")
+        return None
+
+
+def get_random_tianapi_content():
+    """随机获取一种类型的内容"""
+    import random
+    content_types = list(config.TIANAPI_CONTENT_TYPES.keys())
+    random.shuffle(content_types)
+    
+    for ct in content_types:
+        result = fetch_tianapi_content(ct)
+        if result:
+            return result
+    
+    return None
+
+
+if __name__ == '__main__':
+    # 测试拼音转换
+    test_text = "小蝌蚪在池塘里游来游去。"
+    print(add_pinyin_to_text(test_text))
