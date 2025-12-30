@@ -29,10 +29,10 @@ def get_current_user():
     return user
 
 
-@app.route('/switch-user', methods=['POST'])
+@app.route('/switch-user')
 def switch_user():
     """切换用户"""
-    user_name = request.form.get('user_name', '')
+    user_name = request.args.get('user', '')
     if user_name in config.USERS:
         session['current_user'] = user_name
     return redirect(url_for('index'))
