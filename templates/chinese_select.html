@@ -74,6 +74,22 @@
             background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
         }
 
+        .category-card.tenwhy {
+            background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 100%);
+        }
+
+        .category-card.chengyu {
+            background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+        }
+
+        .category-card.poetries {
+            background: linear-gradient(135deg, #eef2ff 0%, #c7d2fe 100%);
+        }
+
+        .category-card.poetry {
+            background: linear-gradient(135deg, #fdf2f8 0%, #fbcfe8 100%);
+        }
+
         .tip-box {
             background: rgba(255, 255, 255, 0.9);
             border-radius: 16px;
@@ -133,6 +149,30 @@
                 <div class="category-icon">💡</div>
                 <div class="category-name">脑筋急转弯</div>
                 <div class="category-desc">动动小脑筋</div>
+            </a>
+
+            <a href="{{ url_for('chinese_reading_type', content_type='tenwhy') }}" class="category-card tenwhy">
+                <div class="category-icon">❓</div>
+                <div class="category-name">十万个为什么</div>
+                <div class="category-desc">探索科学知识</div>
+            </a>
+
+            <a href="{{ url_for('chinese_reading_type', content_type='chengyu') }}" class="category-card chengyu">
+                <div class="category-icon">📜</div>
+                <div class="category-name">成语典故</div>
+                <div class="category-desc">学习成语故事</div>
+            </a>
+
+            <a href="{{ url_for('chinese_reading_type', content_type='poetries') }}" class="category-card poetries">
+                <div class="category-icon">🏛️</div>
+                <div class="category-name">唐诗大全</div>
+                <div class="category-desc">品读古典诗词</div>
+            </a>
+
+            <a href="{{ url_for('chinese_reading_type', content_type='poetry') }}" class="category-card poetry">
+                <div class="category-icon">🌸</div>
+                <div class="category-name">唐诗三百首</div>
+                <div class="category-desc">经典诗歌赏析</div>
             </a>
 
             <a href="{{ url_for('chinese_reading_type', content_type='local') }}" class="category-card local">

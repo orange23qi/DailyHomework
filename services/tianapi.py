@@ -152,6 +152,44 @@ def fetch_tianapi_content(content_type='fairytales', force_new=False):
             answer = result.get('answer', '') or result.get('result', '')
             content = f"问：{quest}\n\n（想一想再看答案哦！）\n\n答：{answer}"
             image = "💡"
+        elif content_type == 'tenwhy':
+            # 十万个为什么
+            title = result.get('title', '十万个为什么')
+            content = result.get('content', '')
+            image = "❓"
+        elif content_type == 'chengyu':
+            # 成语典故
+            chengyu = result.get('chengyu', '')
+            pinyin = result.get('pinyin', '')
+            diangu = result.get('diangu', '')  # 释义
+            chuchu = result.get('chuchu', '')  # 出处
+            fanli = result.get('fanli', '')    # 例句
+            title = f"成语：{chengyu}"
+            content = f"【拼音】{pinyin}\n\n【释义】{diangu}\n\n【出处】{chuchu}"
+            if fanli:
+                content += f"\n\n【例句】{fanli}"
+            image = "📜"
+        elif content_type == 'poetries':
+            # 唐诗大全
+            title = result.get('title', '唐诗')
+            author = result.get('author', '')
+            poem_content = result.get('content', '')
+            content = f"【{author}】\n\n{poem_content}"
+            image = "🏛️"
+        elif content_type == 'poetry':
+            # 唐诗三百首（带赏析）
+            title = result.get('title', '唐诗')
+            author = result.get('author', '')
+            kind = result.get('kind', '')  # 诗体类型
+            poem_content = result.get('content', '')
+            intro = result.get('intro', '')  # 赏析
+            content = f"【{author}】"
+            if kind:
+                content += f" / {kind}"
+            content += f"\n\n{poem_content}"
+            if intro:
+                content += f"\n\n【赏析】\n{intro}"
+            image = "🌸"
         else:
             title = result.get('title', '故事')
             content = result.get('content', '')

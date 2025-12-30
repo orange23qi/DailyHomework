@@ -34,7 +34,11 @@ TIANAPI_CONTENT_TYPES = {
     'story': '故事大全',
     'riddle': '谜语大全',
     'rkl': '绕口令',
-    'naowan': '脑筋急转弯'
+    'naowan': '脑筋急转弯',
+    'tenwhy': '十万个为什么',
+    'chengyu': '成语典故',
+    'poetries': '唐诗大全',
+    'poetry': '唐诗三百首'
 }
 
 # Flask配置
