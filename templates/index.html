@@ -288,8 +288,8 @@
         let mathChart = null;
         const initialData = {
             labels: {{ math_stats.labels | tojson if math_stats else '[]' }},
-        accuracy: { { math_stats.accuracy | tojson if math_stats else '[]' } },
-        duration: { { math_stats.duration | tojson if math_stats else '[]' } }
+        accuracy: {{ math_stats.accuracy | tojson if math_stats else '[]' }},
+        duration: {{ math_stats.duration | tojson if math_stats else '[]' }}
         };
 
         function createChart(data) {
