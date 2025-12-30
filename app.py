@@ -87,14 +87,14 @@ def math_practice():
 def math_submit():
     """提交数学练习答案"""
     practice_id = request.form.get('practice_id', type=int)
-    answers = session.get('answers', {})  # {id: correct_answer}
+    answers = session.get('answers', {})  # {str(id): correct_answer}
     
     if not practice_id or not answers:
         return redirect(url_for('math_practice'))
     
-    # 收集用户答案（按题目ID顺序）
+    # 收集用户答案（按题目ID顺序，注意 JSON 序列化后 keys 是字符串）
     user_answers = []
-    for qid in sorted(answers.keys()):
+    for qid in sorted(answers.keys(), key=lambda x: int(x)):
         answer = request.form.get(f'answer_{qid}', type=int)
         user_answers.append(answer)
     
