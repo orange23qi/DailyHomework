@@ -163,9 +163,8 @@ def chinese_reading_type(content_type):
     # 创建阅读记录
     record_id = create_reading_record(story.get('id', 'unknown'), story['title'])
     
-    # 保存到 session
+    # 只保存必要的 ID 到 session（避免 cookie 过大）
     session['reading_record_id'] = record_id
-    session['story'] = story
     session['content_type'] = content_type
     
     return render_template('chinese_reading.html', 
@@ -195,7 +194,6 @@ def chinese_complete():
         
         # 清除 session
         session.pop('reading_record_id', None)
-        session.pop('story', None)
         
         return jsonify({
             'success': True, 
