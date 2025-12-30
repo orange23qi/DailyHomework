@@ -35,7 +35,9 @@ def switch_user():
     user_name = request.args.get('user', '')
     if user_name in config.USERS:
         session['current_user'] = user_name
-    return redirect(url_for('index'))
+        # 返回 JSON 响应，由前端处理刷新
+        return jsonify({'success': True, 'user': user_name})
+    return jsonify({'success': False})
 
 
 @app.route('/')

@@ -412,15 +412,16 @@
             }
         }
 
-        // 切换用户
+        // 切换用户 - 兼容Safari
         function switchUser(userName) {
-            fetch('/switch-user?user=' + encodeURIComponent(userName))
-                .then(() => {
-                    window.location.reload();
-                })
-                .catch(() => {
-                    window.location.reload();
-                });
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/switch-user?user=' + encodeURIComponent(userName), true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    window.location.href = '/';
+                }
+            };
+            xhr.send();
         }
     </script>
 </body>
