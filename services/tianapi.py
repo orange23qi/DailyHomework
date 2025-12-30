@@ -109,6 +109,20 @@ def fetch_tianapi_content(content_type='fairytales', force_new=False):
         params['type'] = 3  # 童话故事
     elif content_type == 'story':
         params['type'] = 4  # 寓言故事
+    elif content_type == 'chengyu':
+        # 成语典故API需要word参数（必需）
+        common_idioms = [
+            '马到成功', '一马当先', '画龙点睛', '守株待兔', '掩耳盗铃',
+            '叶公好龙', '狐假虎威', '刻舟求剑', '亡羊补牢', '拔苗助长',
+            '井底之蛙', '杯弓蛇影', '对牛弹琴', '鹤立鸡群', '胸有成竹',
+            '望梅止渴', '负荆请罪', '卧薪尝胆', '老马识途', '塞翁失马',
+            '班门弄斧', '铁杵成针', '三顾茅庐', '纸上谈兵', '愚公移山',
+            '精卫填海', '夸父追日', '后羿射日', '女娲补天', '盘古开天',
+            '完璧归赵', '负荆请罪', '将相和', '闻鸡起舞', '程门立雪',
+            '孔融让梨', '凿壁偷光', '囊萤映雪', '悬梁刺股', '韦编三绝'
+        ]
+        params['word'] = random.choice(common_idioms)
+        params.pop('page', None)  # 成语API不需要page参数
     
     print(f"API请求参数: page={random_page}, type={params.get('type', '不指定')}")
     
