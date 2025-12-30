@@ -216,7 +216,7 @@ def chinese_next_story():
         # 从TianAPI获取
         try:
             from services.tianapi import fetch_tianapi_content
-            story = fetch_tianapi_content(content_type)
+            story = fetch_tianapi_content(content_type, force_new=True)
             if story:
                 story['id'] = 'api'
         except Exception as e:

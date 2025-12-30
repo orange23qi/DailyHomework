@@ -55,12 +55,13 @@ def add_pinyin_to_text(text):
     return '\n'.join(result)
 
 
-def fetch_tianapi_content(content_type='fairytales'):
+def fetch_tianapi_content(content_type='fairytales', force_new=False):
     """
     从天行数据API获取内容（带缓存）
     
     Args:
         content_type: 内容类型 (fairytales/story/riddle/rkl/naowan)
+        force_new: 是否强制获取新内容（跳过缓存）
         
     Returns:
         dict: {title, content, image, type_name} 或 None
@@ -70,8 +71,8 @@ def fetch_tianapi_content(content_type='fairytales'):
     if config.TIANAPI_KEY == 'YOUR_TIANAPI_KEY':
         return None
     
-    # 优先从缓存获取
-    if content_type in _content_cache and _content_cache[content_type]:
+    # 优先从缓存获取（除非强制获取新内容）
+    if not force_new and content_type in _content_cache and _content_cache[content_type]:
         cached = _content_cache[content_type]
         item = random.choice(cached)
         print(f"从缓存获取({content_type}): {item.get('title', '')}")
