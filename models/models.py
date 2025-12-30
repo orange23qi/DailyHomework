@@ -17,9 +17,24 @@ def get_current_time():
 
 
 def get_db_connection():
-    """获取数据库连接"""
-    conn = sqlite3.connect(config.DATABASE_PATH)
+    """获取数据库连接（带并发优化）"""
+    conn = sqlite3.connect(
+        config.DATABASE_PATH,
+        timeout=30.0,  # 遇到锁时等待最多30秒
+        check_same_thread=False  # 允许多线程使用同一连接
+    )
     conn.row_factory = sqlite3.Row
+    
+    # 启用 WAL 模式（Write-Ahead Logging）
+    # WAL 模式允许读写并发，大幅减少锁冲突
+    conn.execute('PRAGMA journal_mode=WAL')
+    
+    # 设置 busy_timeout（毫秒），遇到锁时重试等待
+    conn.execute('PRAGMA busy_timeout=30000')
+    
+    # 启用外键约束
+    conn.execute('PRAGMA foreign_keys=ON')
+    
     return conn
 
 
