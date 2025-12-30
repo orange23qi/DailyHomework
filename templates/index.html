@@ -161,21 +161,25 @@
 
 <body>
     <div class="container">
-        <header class="header">
-            {% if users|length > 1 %}
-            <div class="user-selector" style="margin-bottom: 15px;">
+        {% if users|length > 1 %}
+        <div style="position: absolute; top: 15px; right: 15px; z-index: 100;">
+            <select id="userSelector" onchange="switchUser(this.value)" style="padding: 8px 15px; font-size: 1rem; font-weight: 600; 
+                           border: 2px solid #667eea; border-radius: 20px;
+                           background: white; color: #667eea; cursor: pointer;
+                           outline: none; appearance: none; -webkit-appearance: none;
+                           padding-right: 30px; background-image: url('data:image/svg+xml;utf8,<svg fill=\" %23667eea\"
+                height=\"24\" viewBox=\"0 0 24 24\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\">
+                <path d=\"M7 10l5 5 5-5z\" /></svg>');
+                background-repeat: no-repeat; background-position: right 5px center;">
                 {% for user in users %}
-                <a href="{{ url_for('switch_user', user=user) }}"
-                    class="user-btn {% if user == current_user %}active{% endif %}" style="display: inline-block; padding: 8px 20px; border-radius: 20px; text-decoration: none;
-                          border: 2px solid {% if user == current_user %}#667eea{% else %}#e2e8f0{% endif %}; 
-                          background: {% if user == current_user %}linear-gradient(135deg, #667eea 0%, #764ba2 100%){% else %}white{% endif %};
-                          color: {% if user == current_user %}white{% else %}#64748b{% endif %};
-                          font-size: 1.1rem; font-weight: 600; cursor: pointer; margin: 0 5px;">
-                    {{ user }} {% if user == current_user %}✓{% endif %}
-                </a>
+                <option value="{{ user }}" {% if user==current_user %}selected{% endif %}>
+                    👤 {{ user }}
+                </option>
                 {% endfor %}
-            </div>
-            {% endif %}
+            </select>
+        </div>
+        {% endif %}
+        <header class="header">
             <h1>📚 每日作业</h1>
             <p class="subtitle">{% if current_user %}{{ current_user }}，{% endif %}让学习变得更有趣！</p>
             <p class="date" id="currentDate"></p>
@@ -406,6 +410,17 @@
                     chartSection.style.display = 'none';
                 }
             }
+        }
+
+        // 切换用户
+        function switchUser(userName) {
+            fetch('/switch-user?user=' + encodeURIComponent(userName))
+                .then(() => {
+                    window.location.reload();
+                })
+                .catch(() => {
+                    window.location.reload();
+                });
         }
     </script>
 </body>
