@@ -19,6 +19,11 @@ from services.notify import send_practice_result, send_reading_result
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 
+# Session Cookie 配置（Safari 兼容）
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False  # HTTP 环境下需要设为 False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
 
 def get_current_user():
     """获取当前用户名（从 session 获取，默认第一个用户）"""
@@ -68,8 +73,8 @@ def math_practice():
     # 创建练习记录（关联当前用户）
     practice_id = create_practice('数学', questions, user_name=current_user)
     
-    # 保存题目到 session
-    session['questions'] = questions
+    # 只保存验证所需的最小数据到 session（减少 cookie 大小，解决 Safari 兼容问题）
+    session['answers'] = {q['id']: q['answer'] for q in questions}
     session['practice_id'] = practice_id
     
     return render_template('math_practice.html', 
@@ -82,15 +87,15 @@ def math_practice():
 def math_submit():
     """提交数学练习答案"""
     practice_id = request.form.get('practice_id', type=int)
-    questions = session.get('questions', [])
+    answers = session.get('answers', {})  # {id: correct_answer}
     
-    if not practice_id or not questions:
+    if not practice_id or not answers:
         return redirect(url_for('math_practice'))
     
-    # 收集用户答案
+    # 收集用户答案（按题目ID顺序）
     user_answers = []
-    for q in questions:
-        answer = request.form.get(f'answer_{q["id"]}', type=int)
+    for qid in sorted(answers.keys()):
+        answer = request.form.get(f'answer_{qid}', type=int)
         user_answers.append(answer)
     
     # 提交并获取结果
@@ -99,8 +104,16 @@ def math_submit():
     # 发送通知给家长
     send_practice_result(result)
     
-    # 保存结果到 session（用于订正）
-    session['result'] = result
+    # 保存结果到 session（用于订正）- 只保存最小必要数据
+    session['result'] = {
+        'practice_id': result.get('practice_id'),
+        'total': result.get('total'),
+        'correct': result.get('correct'),
+        'wrong': result.get('wrong'),
+        'accuracy': result.get('accuracy'),
+        'duration': result.get('duration'),
+        'wrong_questions': result.get('wrong_questions', [])
+    }
     
     return render_template('result.html', result=result)
 
