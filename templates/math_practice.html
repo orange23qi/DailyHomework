@@ -37,9 +37,25 @@
                     <div class="question-item">
                         <div class="question-number">{{ q.id }}</div>
                         <div class="question-content">
-                            <span class="question-text">{{ q.display }}</span>
+                            {% if q.question_type == 'blank_first' %}
+                            {# 第一个数填空：□ + b = c #}
+                            <input type="number" name="answer_{{ q.id }}" class="answer-input inline-input"
+                                inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-question="{{ q.id }}"
+                                required>
+                            <span class="question-text"> {{ q.operator }} {{ q.num2 }} = {{ q.result }}</span>
+                            {% elif q.question_type == 'blank_second' %}
+                            {# 第二个数填空：a + □ = c #}
+                            <span class="question-text">{{ q.num1 }} {{ q.operator }} </span>
+                            <input type="number" name="answer_{{ q.id }}" class="answer-input inline-input"
+                                inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-question="{{ q.id }}"
+                                required>
+                            <span class="question-text"> = {{ q.result }}</span>
+                            {% else %}
+                            {# 普通题：a + b = ? #}
+                            <span class="question-text">{{ q.num1 }} {{ q.operator }} {{ q.num2 }} = </span>
                             <input type="number" name="answer_{{ q.id }}" class="answer-input" inputmode="numeric"
                                 pattern="[0-9]*" autocomplete="off" data-question="{{ q.id }}" required>
+                            {% endif %}
                         </div>
                     </div>
                     {% endfor %}

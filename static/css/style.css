@@ -241,6 +241,15 @@ html {
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
 }
 
+/* 内联输入框（用于填空题） */
+.answer-input.inline-input {
+    width: 80px;
+    height: 50px;
+    font-size: 1.6rem;
+    vertical-align: middle;
+    display: inline-block;
+}
+
 .answer-input.correct {
     border-color: #48bb78;
     background: #f0fff4;
