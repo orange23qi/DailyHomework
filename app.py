@@ -201,11 +201,13 @@ def chinese_reading_type(content_type):
             from generators.stories import get_random_story as get_local_story
             story = get_local_story()
     
-    # 创建阅读记录（关联当前用户）
-    record_id = create_reading_record(story.get('id', 'unknown'), story['title'], user_name=current_user)
+    # 检查是否已有未完成的阅读记录（复用记录，避免切换内容类型时重新计时）
+    record_id = session.get('reading_record_id')
+    if not record_id:
+        # 创建新的阅读记录（关联当前用户）
+        record_id = create_reading_record(story.get('id', 'unknown'), story['title'], user_name=current_user)
+        session['reading_record_id'] = record_id
     
-    # 只保存必要的 ID 到 session（避免 cookie 过大）
-    session['reading_record_id'] = record_id
     session['content_type'] = content_type
     
     return render_template('chinese_reading.html', 
@@ -214,6 +216,7 @@ def chinese_reading_type(content_type):
                          content_type=content_type,
                          reading_duration=config.READING_DURATION_MINUTES,
                          current_user=current_user)
+
 
 
 @app.route('/chinese/complete', methods=['POST'])

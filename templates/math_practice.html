@@ -118,8 +118,15 @@
             });
         });
 
-        // 表单提交验证
+        // 表单提交验证（含防重复提交）
+        let isSubmitting = false;
         document.getElementById('practiceForm').addEventListener('submit', function (e) {
+            // 防止重复提交
+            if (isSubmitting) {
+                e.preventDefault();
+                return false;
+            }
+            
             let allFilled = true;
             inputs.forEach(input => {
                 if (input.value.trim() === '') {
@@ -135,6 +142,12 @@
                 return false;
             }
 
+            // 标记正在提交，禁用按钮
+            isSubmitting = true;
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ 提交中...';
+            
             clearInterval(timerInterval);
         });
 

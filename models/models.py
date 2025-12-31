@@ -75,6 +75,8 @@ def init_db():
             is_correct INTEGER,
             corrected_answer INTEGER,
             is_corrected INTEGER DEFAULT 0,
+            question_type TEXT DEFAULT 'normal',
+            result INTEGER,
             FOREIGN KEY (practice_id) REFERENCES practice (id)
         )
     ''')
@@ -105,6 +107,22 @@ def init_db():
         cursor.execute('ALTER TABLE reading_record ADD COLUMN user_name TEXT DEFAULT "宝宝"')
     except sqlite3.OperationalError:
         pass  # 列已存在
+    
+    # 添加 notified 字段用于防止重复通知
+    try:
+        cursor.execute('ALTER TABLE practice ADD COLUMN notified INTEGER DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # 列已存在
+    
+    # 添加 question_type 和 result 字段
+    try:
+        cursor.execute('ALTER TABLE question ADD COLUMN question_type TEXT DEFAULT "normal"')
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute('ALTER TABLE question ADD COLUMN result INTEGER')
+    except sqlite3.OperationalError:
+        pass
     
     conn.commit()
     conn.close()
@@ -139,9 +157,10 @@ def create_practice(subject: str, questions: List[Dict], user_name: str = '宝�
     # 保存题目
     for q in questions:
         cursor.execute('''
-            INSERT INTO question (practice_id, question_num, num1, operator, num2, correct_answer)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (practice_id, q['id'], q['num1'], q['operator'], q['num2'], q['answer']))
+            INSERT INTO question (practice_id, question_num, num1, operator, num2, correct_answer, question_type, result)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (practice_id, q['id'], q['num1'], q['operator'], q['num2'], q['answer'], 
+              q.get('question_type', 'normal'), q.get('result')))
     
     conn.commit()
     conn.close()
@@ -179,9 +198,23 @@ def submit_practice(practice_id: int, user_answers: List[int]) -> Dict:
         if is_correct:
             correct_count += 1
         else:
+            # 根据题型生成正确的显示格式
+            question_type = q['question_type'] if 'question_type' in q.keys() else 'normal'
+            result = q['result'] if 'result' in q.keys() else (q['num1'] + q['num2'] if q['operator'] == '+' else q['num1'] - q['num2'])
+            
+            if question_type == 'blank_first':
+                # □ + b = c
+                display = f"□ {q['operator']} {q['num2']} = {result}"
+            elif question_type == 'blank_second':
+                # a + □ = c
+                display = f"{q['num1']} {q['operator']} □ = {result}"
+            else:
+                # 普通题：a + b = ?
+                display = f"{q['num1']} {q['operator']} {q['num2']} = "
+            
             wrong_questions.append({
                 'id': q['question_num'],
-                'display': f"{q['num1']} {q['operator']} {q['num2']} = ",
+                'display': display,
                 'correct_answer': q['correct_answer'],
                 'user_answer': user_answer
             })
@@ -256,9 +289,20 @@ def submit_corrections(practice_id: int, corrections: Dict[int, int]) -> Dict:
         else:
             all_correct = False
             if q:
+                # 根据题型生成正确的显示格式
+                question_type = q['question_type'] if 'question_type' in q.keys() else 'normal'
+                result = q['result'] if 'result' in q.keys() else (q['num1'] + q['num2'] if q['operator'] == '+' else q['num1'] - q['num2'])
+                
+                if question_type == 'blank_first':
+                    display = f"□ {q['operator']} {q['num2']} = {result}"
+                elif question_type == 'blank_second':
+                    display = f"{q['num1']} {q['operator']} □ = {result}"
+                else:
+                    display = f"{q['num1']} {q['operator']} {q['num2']} = "
+                
                 still_wrong.append({
                     'id': question_num,
-                    'display': f"{q['num1']} {q['operator']} {q['num2']} = ",
+                    'display': display,
                     'correct_answer': q['correct_answer'],
                     'user_answer': answer
                 })
@@ -563,3 +607,47 @@ def complete_reading(record_id: int) -> Dict:
 
 # 初始化数据库
 init_db()
+
+
+def is_practice_notified(practice_id: int) -> bool:
+    """
+    检查练习是否已发送通知
+    
+    Args:
+        practice_id: 练习ID
+        
+    Returns:
+        是否已通知
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT notified FROM practice WHERE id = ?', (practice_id,))
+    row = cursor.fetchone()
+    
+    conn.close()
+    
+    if row and row['notified']:
+        return True
+    return False
+
+
+def mark_practice_notified(practice_id: int) -> bool:
+    """
+    标记练习已发送通知
+    
+    Args:
+        practice_id: 练习ID
+        
+    Returns:
+        是否成功
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('UPDATE practice SET notified = 1 WHERE id = ?', (practice_id,))
+    
+    conn.commit()
+    conn.close()
+    
+    return True

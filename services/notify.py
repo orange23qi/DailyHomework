@@ -21,6 +21,14 @@ def send_practice_result(result: dict) -> bool:
         print("警告: Server酱 SendKey 未配置，跳过通知发送")
         return False
     
+    # 防止重复发送
+    practice_id = result.get('practice_id')
+    if practice_id:
+        from models.models import is_practice_notified, mark_practice_notified
+        if is_practice_notified(practice_id):
+            print(f"练习 {practice_id} 已发送过通知，跳过")
+            return False
+    
     # 构建消息标题
     now = datetime.now()
     date_str = now.strftime('%Y年%m月%d日')
@@ -65,6 +73,9 @@ def send_practice_result(result: dict) -> bool:
         result_json = response.json()
         if result_json.get('code') == 0:
             print(f"通知发送成功")
+            # 标记已通知
+            if practice_id:
+                mark_practice_notified(practice_id)
             return True
         else:
             print(f"通知发送失败: {result_json}")
@@ -73,6 +84,7 @@ def send_practice_result(result: dict) -> bool:
     except Exception as e:
         print(f"通知发送异常: {e}")
         return False
+
 
 
 if __name__ == '__main__':
