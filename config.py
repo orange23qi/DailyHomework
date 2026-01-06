@@ -4,8 +4,9 @@
 import os
 import json
 
-# Server酱配置
-# 请将 YOUR_SENDKEY 替换为您的实际 SendKey
+# Server酱³配置
+# 请将 YOUR_UID 和 YOUR_SENDKEY 替换为您的实际值
+SERVERCHAN_UID = os.environ.get('SERVERCHAN_UID', 'YOUR_UID')
 SERVERCHAN_SENDKEY = os.environ.get('SERVERCHAN_SENDKEY', 'YOUR_SENDKEY')
 
 # 数学题目配置

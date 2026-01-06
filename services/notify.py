@@ -17,8 +17,8 @@ def send_practice_result(result: dict) -> bool:
     Returns:
         是否发送成功
     """
-    if config.SERVERCHAN_SENDKEY == 'YOUR_SENDKEY':
-        print("警告: Server酱 SendKey 未配置，跳过通知发送")
+    if config.SERVERCHAN_UID == 'YOUR_UID' or config.SERVERCHAN_SENDKEY == 'YOUR_SENDKEY':
+        print("警告: Server酱 UID 或 SendKey 未配置，跳过通知发送")
         return False
     
     # 防止重复发送
@@ -61,8 +61,8 @@ def send_practice_result(result: dict) -> bool:
     else:
         content += "\n> 🌟 全部正确，太棒了！"
     
-    # 发送请求
-    url = f"https://sctapi.ftqq.com/{config.SERVERCHAN_SENDKEY}.send"
+    # 发送请求 (Server酱³)
+    url = f"https://{config.SERVERCHAN_UID}.push.ft07.com/send/{config.SERVERCHAN_SENDKEY}.send"
     
     try:
         response = requests.post(url, data={
@@ -114,8 +114,8 @@ def send_reading_result(result: dict) -> bool:
     Returns:
         是否发送成功
     """
-    if config.SERVERCHAN_SENDKEY == 'YOUR_SENDKEY':
-        print("警告: Server酱 SendKey 未配置，跳过通知发送")
+    if config.SERVERCHAN_UID == 'YOUR_UID' or config.SERVERCHAN_SENDKEY == 'YOUR_SENDKEY':
+        print("警告: Server酱 UID 或 SendKey 未配置，跳过通知发送")
         return False
     
     now = datetime.now()
@@ -134,7 +134,7 @@ def send_reading_result(result: dict) -> bool:
 > 🌟 小朋友完成了今天的阅读任务，太棒了！
 """
     
-    url = f"https://sctapi.ftqq.com/{config.SERVERCHAN_SENDKEY}.send"
+    url = f"https://{config.SERVERCHAN_UID}.push.ft07.com/send/{config.SERVERCHAN_SENDKEY}.send"
     
     try:
         response = requests.post(url, data={
